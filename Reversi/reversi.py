@@ -35,7 +35,8 @@ def game(black_engine, white_engine, game_time=30.0, verbose=False):
             move = get_move(board, engine[color], color, move_num, total_time)
             end_time = timeit.default_timer()
             # Update user total_time
-            time = round(end_time - start_time, 1)
+            time = round(end_time -
+                         start_time, 1)
             total_time[color] -= time
 
             if total_time[color] < 0:
@@ -45,7 +46,8 @@ def game(black_engine, white_engine, game_time=30.0, verbose=False):
             if move is not None:
                 board.execute_move(move, color)
                 moves.append(move)
-
+                board.display(total_time)
+                raw_input('Press Enter to continue')
                 if verbose:
                     print(("--\n\nRound {}: {} plays in {}\n"
                            ).format(str(move_num + 1), player[color], move_string(move)))
