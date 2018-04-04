@@ -45,7 +45,8 @@ def game(black_engine, white_engine, game_time=30, verbose=False):
             if move is not None:
                 board.execute_move(move, color)
                 moves.append(move)
-
+                board.display(totaltime)
+                raw_input("Press Enter to continue...")
                 if verbose:
                     print(("--\n\nRound {}: {} plays in {}\n"
                            ).format(str(move_num + 1), player[color], move_string(move)))
@@ -152,7 +153,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Play the Reversi/Othello game using different engines.")
     parser.add_argument("-a", "--engine_a", action="store", type=str, default="greedy",
                         help="first engine (human, eona, greedy, nonull, random)")
-    parser.add_argument("-b", "--engine_b", action="store", type=str, default="random",
+    parser.add_argument("-b", "--engine_b", action="store", type=str, default="mcts",
                         help="second engine (human, eona, greedy, nonull, random)")
     # parser.add_argument("-mB", action="store_true", default=False, help="turn on alpha-beta pruning for the first
     # player") parser.add_argument("-mW", action="store_true", default=False, help="turn on alpha-beta pruning for
