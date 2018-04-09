@@ -1,5 +1,4 @@
 import random
-import copy
 import MctsNode
 
 
@@ -13,27 +12,30 @@ class MctsCore(object):
         pass
 
     def run(self):
-        if self.pre_judge():
+        if not self.pre_judge():
             self.cal()
 
     def pre_judge(self):
         if self.fixed_potential.match(self.board, self.color):
             self.moves = self.fixed_potential.getSolution()
-            return False
-        else:
             return True
+        else:
+            return False
 
     def cal(self):
-        rootnode = MctsNode.MctsNode(self.board, self.color)
-        while True:
-            node = rootnode
+        root_node = MctsNode.MctsNode(self.board, self.color)
+        flag = True
+        while flag:
+            node = root_node
+            flag = False
             # Select
             while node.untriedMoves == [] and node.childNodes != []:  # node is fully expanded and non-terminal
-                node = node.selectChild()
+                node = node.select_child()
             # Expand
             if node.untriedMoves:  # if we can expand (i.e. state/node is non-terminal)
                 move = random.choice(node.untriedMoves)
-                node = node.AddChild(move)  # add child and descend tree
+                node = node.add_child(move)  # add child and descend tree
+                flag = True
             # Simulation
             result = node.simulation()
             # Backpropagate
