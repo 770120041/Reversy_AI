@@ -8,7 +8,7 @@ import time
 
 class VisualGame:
     def __init__(self):
-        self.engines_name = {-1: 'human', 1: 'simple'}
+        self.engines_name = {-1: 'simple', 1: 'simple'}
 
         self.window_width = 800
         self.window_height = 600
@@ -49,11 +49,13 @@ class VisualGame:
         pygame.display.set_caption(self.caption)
         self.repaint()
 
-        self.run_game()
-
-        # wait for quit
-        while True:
-            self.handle_event()
+        restart = True
+        while restart:
+            try:
+                restart = False
+                self.run_game()
+            except SystemError as err:
+                restart = True
 
     def repaint(self):
         self.screen.fill(self.bg_color)
@@ -134,6 +136,8 @@ class VisualGame:
                     self.continuable = True
                 elif event.key == pygame.K_SPACE:
                     self.one_step_mode = self.switch_to_one_step_mode(not self.one_step_mode)
+                elif event.key == pygame.K_r:
+                    raise SystemError()
             elif event.type == pygame.MOUSEBUTTONUP:
                 if self.waiting_for_player:
                     mouse_pos = pygame.mouse.get_pos()
@@ -199,6 +203,7 @@ class VisualGame:
                         self.board.execute_move(self.current_move, self.current_turn)
                         one_has_move = True
                         self.hint_turn = -self.hint_turn
+                    self.handle_event()
                     self.repaint()
                     while self.one_step_mode and not self.continuable:
                         self.handle_event()
@@ -210,8 +215,9 @@ class VisualGame:
             pass
         except LookupError as err:
             pass
-        except SystemError as err:
-            pass
+        # wait for quit
+        while True:
+            self.handle_event()
 
     def wait_for_player(self):
         possible_moves = self.board.get_legal_moves(self.current_turn)
