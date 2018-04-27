@@ -7,8 +7,8 @@ import signal
 import sys
 import timeit
 import traceback
-
 from board import Board, move_string
+
 
 player = {-1: "Black", 1: "White"}
 
@@ -73,7 +73,7 @@ def get_move(board, engine, color, move_num, time, **kwargs):
         return legal_moves[0]
     else:
         try:
-            move = engine.get_move(copy.deepcopy(board), color, move_num, time[color], time[-color])
+            move = engine.get_move(color)
         except Exception as e:
             print(traceback.format_exc())
             raise SystemError(color)
