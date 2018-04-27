@@ -8,6 +8,8 @@ import time
 
 class VisualGame:
     def __init__(self):
+        self.engines_name = {-1: 'human', 1: 'simple'}
+
         self.window_width = 800
         self.window_height = 600
         self.window_size = (self.window_width, self.window_height)
@@ -18,20 +20,29 @@ class VisualGame:
         self.boarder_width = 5
         self.emphasize_size = 40
         self.emphasize_length = 5
-        self.bg_color = (180, 230, 180)
+        self.hint_size = 40
+        self.hint_length = 5
+        self.bg_color = (231, 233, 210)
         self.board_color = (36, 40, 41)
-        self.player_color = {-1: (0, 0, 0), 1: (255, 255, 255), 0: (230, 80, 80)}
-        self.engines_name = {-1: 'simple', 1: 'simple'}
+        self.player_color = {-1: (0, 0, 0), 1: (255, 255, 255)}
+        self.emphasize_color = (230, 80, 80)
+        self.hint_color = (6, 156, 130)
+        self.current_turn = -1
+        self.hint_turn = -1
         self.engines = {-1: None, 1: None}
         for i in [-1, 1]:
             engine_name = self.engines_name[i]
             self.engines[i] = __import__('engines.' + engine_name).__dict__[engine_name].__dict__['engine']()
-        self.one_step_mode = True
+        self.has_human_player = 'human' in self.engines_name[-1]
+        self.one_step_mode = self.switch_to_one_step_mode(True)
         self.continuable = True
         self.board = None
         self.total_time = None
         self.use_time = None
         self.has_game = False
+        self.current_move = None
+        self.waiting_for_player = False
+        self.move_player_choose = None
 
         pygame.init()
         self.screen = pygame.display.set_mode(self.window_size)
@@ -42,11 +53,9 @@ class VisualGame:
 
         # wait for quit
         while True:
-            self.repaint()
+            self.handle_event()
 
     def repaint(self):
-        self.handle_event()
-
         self.screen.fill(self.bg_color)
         # draw board
         for i in range(0, 9):
@@ -67,22 +76,33 @@ class VisualGame:
                 for j in range(0, 8):
                     if self.board[i][j] is not 0:
                         pygame.draw.circle(self.screen, self.player_color[self.board[i][j]],
-                                           [self.board_x + i * self.grid_size + self.grid_size / 2,
-                                            self.board_y + j * self.grid_size + self.grid_size / 2],
+                                           self.pos_transform_index_to_pixel(i, j),
                                            self.grid_size / 3, 0)
             # emphasize last move
             if self.current_move is not None:
                 x = self.current_move[0]
                 y = self.current_move[1]
                 for direction in [(-1, -1), (-1, 1), (1, -1), (1, 1)]:
-                    point_center = [self.board_x + x * self.grid_size + self.grid_size / 2,
-                                    self.board_y + y * self.grid_size + self.grid_size / 2]
+                    point_center = self.pos_transform_index_to_pixel(x, y)
                     point_angle = [point_center[0] + direction[0] * self.emphasize_size / 2,
                                    point_center[1] + direction[1] * self.emphasize_size / 2]
                     p1 = [point_angle[0], point_angle[1] - direction[1] * self.emphasize_length]
                     p2 = [point_angle[0] - direction[0] * self.emphasize_length, point_angle[1]]
-                    pygame.draw.line(self.screen, self.player_color[0], point_angle, p1, 3)
-                    pygame.draw.line(self.screen, self.player_color[0], point_angle, p2, 3)
+                    pygame.draw.line(self.screen, self.emphasize_color, point_angle, p1, 3)
+                    pygame.draw.line(self.screen, self.emphasize_color, point_angle, p2, 3)
+            # draw possible move
+            possible_moves = self.board.get_legal_moves(self.hint_turn)
+            for possible_move in possible_moves:
+                x = possible_move[0]
+                y = possible_move[1]
+                for direction in [(-1, -1), (-1, 1), (1, -1), (1, 1)]:
+                    point_center = self.pos_transform_index_to_pixel(x, y)
+                    point_angle = [point_center[0] + direction[0] * self.hint_size / 2,
+                                   point_center[1] + direction[1] * self.hint_size / 2]
+                    p1 = [point_angle[0], point_angle[1] - direction[1] * self.hint_length]
+                    p2 = [point_angle[0] - direction[0] * self.hint_length, point_angle[1]]
+                    pygame.draw.line(self.screen, self.hint_color, point_angle, p1, 3)
+                    pygame.draw.line(self.screen, self.hint_color, point_angle, p2, 3)
             # draw score
             pygame.draw.circle(self.screen, self.player_color[-1],
                                [self.window_width / 4 + self.board_x * 3 / 2 + self.grid_size * 6, self.grid_size],
@@ -113,7 +133,17 @@ class VisualGame:
                 if event.key == pygame.K_RETURN:
                     self.continuable = True
                 elif event.key == pygame.K_SPACE:
-                    self.one_step_mode = not self.one_step_mode
+                    self.one_step_mode = self.switch_to_one_step_mode(not self.one_step_mode)
+            elif event.type == pygame.MOUSEBUTTONUP:
+                if self.waiting_for_player:
+                    mouse_pos = pygame.mouse.get_pos()
+                    grid_chosen = self.pos_transform_pixel_to_index(mouse_pos[0], mouse_pos[1])
+                    possible_moves = self.board.get_legal_moves(self.current_turn)
+                    for possible_move in possible_moves:
+                        if grid_chosen[0] == possible_move[0] and grid_chosen[1] == possible_move[1]:
+                            self.move_player_choose = grid_chosen
+                            self.waiting_for_player = False
+                            break
 
     def get_move(self, move_num, color):
         legal_moves = self.board.get_legal_moves(color)
@@ -151,18 +181,24 @@ class VisualGame:
         try:
             for move_num in range(0, 35):
                 one_has_move = False
-                for self.current_color in [-1, 1]:
+                for self.current_turn in [-1, 1]:
+                    self.hint_turn = self.current_turn
+                    self.repaint()
                     self.continuable = False
                     start_time = timeit.default_timer()
-                    self.current_move = self.get_move(move_num, self.current_color)
+                    if self.engines_name[self.current_turn] is not 'human':
+                        self.current_move = self.get_move(move_num, self.current_turn)
+                    else:
+                        self.current_move = self.wait_for_player()
                     end_time = timeit.default_timer()
-                    self.use_time[self.current_color] = use_time = round(end_time - start_time, 1)
-                    self.total_time[self.current_color] -= use_time
-                    if self.total_time[self.current_color] < 0:
-                        raise RuntimeError(self.current_color)
+                    self.use_time[self.current_turn] = use_time = round(end_time - start_time, 1)
+                    self.total_time[self.current_turn] -= use_time
+                    if self.total_time[self.current_turn] < 0:
+                        raise RuntimeError(self.current_turn)
                     if self.current_move is not None:
-                        self.board.execute_move(self.current_move, self.current_color)
+                        self.board.execute_move(self.current_move, self.current_turn)
                         one_has_move = True
+                        self.hint_turn = -self.hint_turn
                     self.repaint()
                     while self.one_step_mode and not self.continuable:
                         self.handle_event()
@@ -176,6 +212,30 @@ class VisualGame:
             pass
         except SystemError as err:
             pass
+
+    def wait_for_player(self):
+        possible_moves = self.board.get_legal_moves(self.current_turn)
+        if possible_moves:
+            self.waiting_for_player = True
+            while self.waiting_for_player:
+                self.handle_event()
+                time.sleep(0.5)
+            return self.move_player_choose
+        else:
+            return None
+
+    def pos_transform_index_to_pixel(self, x, y):
+        return [self.board_x + x * self.grid_size + self.grid_size / 2,
+                self.board_y + y * self.grid_size + self.grid_size / 2]
+
+    def pos_transform_pixel_to_index(self, x, y):
+        return [(x - self.board_x) / self.grid_size, (y - self.board_y) / self.grid_size]
+
+    def switch_to_one_step_mode(self, flag):
+        if self.has_human_player:
+            return False
+        else:
+            return flag
 
 
 VisualGame()
