@@ -8,7 +8,7 @@ import time
 
 class VisualGame:
     def __init__(self):
-        self.engines_name = {-1: 'simple', 1: 'simple'}
+        self.engines_name = {-1: 'simple', 1: 'mcts'}
 
         self.window_width = 800
         self.window_height = 600
@@ -33,7 +33,7 @@ class VisualGame:
         for i in [-1, 1]:
             engine_name = self.engines_name[i]
             self.engines[i] = __import__('engines.' + engine_name).__dict__[engine_name].__dict__['engine']()
-        self.has_human_player = 'human' in self.engines_name[-1]
+        self.has_human_player = (self.engines_name[-1] is 'human') or (self.engines_name[1] is 'human')
         self.one_step_mode = self.switch_to_one_step_mode(True)
         self.continuable = True
         self.board = None
