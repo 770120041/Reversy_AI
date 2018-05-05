@@ -32,7 +32,10 @@ class MCTSNode:
         return self.child_num is self.all_moves_num and self.all_moves_num is not 0
 
     def find_child_node_by_board(self, board):
-        for child_node in self.child_nodes:
+        for i in range(self.child_num):
+            child_node = self.child_nodes[i]
+            if child_node is None:
+                continue
             flag = True
             for x in range(8):
                 for y in range(8):
@@ -144,6 +147,7 @@ class MCTSNode:
 
     def print_node(self):
         print('address(' + str(hex(id(self))) + ') ' +
+              'generation(' + str(self.generation) + ') ' +
               'id(' + self.id + ') ' +
               'move(' + chr(self.cause_move[0]+65) + str(self.cause_move[1] + 1) + ') '
               'stats(' + str(self.stats[-1]) + ',' + str(self.stats[1]) + ') ')
@@ -165,6 +169,7 @@ class MCTSCore:
         self.start_time = timer
 
         self.root = self.get_root()
+        self.reset_root()
         while round(timeit.default_timer() - self.start_time, 2) < self.time_remained:
             node = self.root
             try:
@@ -212,6 +217,19 @@ class MCTSCore:
                 return MCTSNode(deepcopy(self.board), self.color, None, 0, '0', [0, 0])
             else:
                 return branch_node
+
+    def reset_root(self):
+        queue = [self.root]
+        self.root.generation = 0
+        self.root.id = '0'
+        while queue:
+            if queue[0] is not None:
+                for i in range(queue[0].child_num):
+                    node = queue[0].child_nodes[i]
+                    node.generation = queue[0].generation + 1
+                    node.id = queue[0].id + '.' + str(i)
+                    queue.append(node)
+            queue.pop(0)
 
 
 class MCTSEngine(Engine):

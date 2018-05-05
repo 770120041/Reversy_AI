@@ -8,7 +8,7 @@ import time
 
 class VisualGame:
     def __init__(self):
-        self.engines_name = {-1: 'human', 1: 'mcts'}
+        self.engines_name = {-1: 'simple', 1: 'mcts'}
 
         self.window_width = 800
         self.window_height = 600
