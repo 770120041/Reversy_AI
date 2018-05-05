@@ -31,6 +31,20 @@ class MCTSNode:
     def has_tried_all(self):
         return self.child_num is self.all_moves_num and self.all_moves_num is not 0
 
+    def find_child_node_by_board(self, board):
+        for child_node in self.child_nodes:
+            flag = True
+            for x in range(8):
+                for y in range(8):
+                    if child_node.board[x][y] is not board[x][y]:
+                        flag = False
+                        break
+                if not flag:
+                    break
+            if flag:
+                return child_node
+        return None
+
     def get_best_child_index(self, mode):
         constant = 1 / math.sqrt(2.0)
         best_child_index = -1
@@ -129,22 +143,28 @@ class MCTSNode:
         return num_pieces_me - num_pieces_op
 
     def print_node(self):
-        print('id(' + self.id + ') ' +
+        print('address(' + str(hex(id(self))) + ') ' +
+              'id(' + self.id + ') ' +
               'move(' + chr(self.cause_move[0]+65) + str(self.cause_move[1] + 1) + ') '
               'stats(' + str(self.stats[-1]) + ',' + str(self.stats[1]) + ') ')
 
 
 class MCTSCore:
-    def __init__(self, board, color, time, timer):
+    def __init__(self):
+        self.board = None
+        self.color = None
+        self.time_remained = None
+        self.start_time = None
+        self.root = None
+        self.move = None
+
+    def run(self, board, color, time, timer):
         self.board = board
         self.color = color
         self.time_remained = time
         self.start_time = timer
-        self.root = None
-        self.move = random.choice(board.get_legal_moves(color))
 
-    def run(self):
-        self.root = MCTSNode(deepcopy(self.board), self.color, None, 0, '0', [0, 0])
+        self.root = self.get_root()
         while round(timeit.default_timer() - self.start_time, 2) < self.time_remained:
             node = self.root
             try:
@@ -165,7 +185,14 @@ class MCTSCore:
                 print('There is a Error: end')
 
     def current_best_move(self):
-        return self.root.all_moves[self.root.get_best_child_index(MCTSNode.EXPLOITATION)]
+        best_child_index = self.root.get_best_child_index(MCTSNode.EXPLOITATION)
+        if best_child_index is -1:
+            self.root = None
+            return None
+        else:
+            selected_move = self.root.all_moves[best_child_index]
+            self.root = self.root.child_nodes[best_child_index]
+            return selected_move
 
     def print_tree(self):
         queue = [self.root]
@@ -176,17 +203,26 @@ class MCTSCore:
                     queue.append(node)
             queue.pop(0)
 
+    def get_root(self):
+        if self.root is None:
+            return MCTSNode(deepcopy(self.board), self.color, None, 0, '0', [0, 0])
+        else:
+            branch_node = self.root.find_child_node_by_board(self.board)
+            if branch_node is None:
+                return MCTSNode(deepcopy(self.board), self.color, None, 0, '0', [0, 0])
+            else:
+                return branch_node
+
 
 class MCTSEngine(Engine):
     def __init__(self):
-        pass
+        self.core = MCTSCore()
 
     def get_move(self, board, color, move_num=None, time_remaining=None, time_opponent=None):
         timer = timeit.default_timer()
-        core = MCTSCore(board, color, self.cal_time(move_num, time_remaining), timer)
-        core.run()
-        core.print_tree()
-        return core.current_best_move()
+        self.core.run(board, color, self.cal_time(move_num, time_remaining), timer)
+        self.core.print_tree()
+        return self.core.current_best_move()
 
     @staticmethod
     def cal_time(move_num, time_remaining):
