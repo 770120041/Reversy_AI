@@ -19,7 +19,8 @@ class MCTSNode:
         self.generation = generation
         self.id = index
         self.cause_move = cause_move
-        self.all_moves = self.board.get_legal_moves(self.turn)
+        # self.all_moves = self.board.get_legal_moves(self.turn) # 原来是直接获取所有
+        self.all_moves = self.get_moves_filter()
         self.all_moves_num = len(self.all_moves)
         self.child_nodes = [None] * self.all_moves_num
         self.child_num = 0
@@ -151,6 +152,11 @@ class MCTSNode:
               'id(' + self.id + ') ' +
               'move(' + chr(self.cause_move[0]+65) + str(self.cause_move[1] + 1) + ') '
               'stats(' + str(self.stats[-1]) + ',' + str(self.stats[1]) + ') ')
+
+    def get_moves_filter(self):
+        moves = self.board.get_legal_moves(self.turn)
+        # add the filter here
+        return moves
 
 
 class MCTSCore:
