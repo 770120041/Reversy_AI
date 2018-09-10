@@ -1,6 +1,13 @@
-# zju_AI_project
-A Group Work by Jiang Wu, Zhe Liu and Wenlong Yan  
+# Reversy AI
+A MCTS Reversy game AI implemeted by Jiang Wu, Zhe Liu and Wenlong Yan
 
-The course projects for the course Artificial Intelligence  
+## Introduction
+Our Reversy AI is implemented from the PyGame frame work, and the code in 'engine' folder is developed by us.
+I mainly developed the way of how to optimize the initial MCTS algorithm.
+We developed three engines at last:
+1. The engine developed using original MCTS idea
+2. The engine that evalute the importantce of the position in the boards with MCTS engine
+3. the eigine that have recorded some playbooks and move a piece using the optimal solution with MCTS engine
+4. the engine that combines engine 2 and 3 but have a balance of importance for them
 
-Our AI Ranked 3rd in class competition, using MCTS method combining with evaluation of postions and book
+Our AI engine ranked 3rd in the class competition
